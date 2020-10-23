@@ -243,7 +243,7 @@ function disappear (ball, time) {
 	ball.t0 = time;
 	ball.pos0 = vec2.clone(ball.pos);
 	ball.posTarget = vec2.fromValues(-R + R2, -R + R2);
-	ball.posDelta = vec2.scale(vec2.create(), ball.delta, 50);
+	ball.posDelta = vec2.add(vec2.create(), vec2.scale(vec2.create(), ball.delta, 50), ball.pos0);
 	ball.animate = animateDisappear;
 }
 
