@@ -2,11 +2,13 @@ import React from 'react';
 import './RunningCircle.css';
 import Pool from './modules/Pool';
 import Ball from './modules/Ball';
+import { vec2 } from 'gl-matrix'
+import { queueFunction } from './modules/utils'
 
 export default class RunningCircle extends React.Component {
-	constructor(props) {
+	constructor (props) {
 		super(props);
-		this.state = {count: 0, showLines: false, delay: 10, autoDelay: true};
+		this.state = { count: 0, showLines: false, delay: 10, autoDelay: true };
 		this.refCanvasBG = React.createRef();
 		this.refCanvasCircles = React.createRef();
 		this.__handlerShowLines = this.showLines.bind(this);
@@ -16,15 +18,15 @@ export default class RunningCircle extends React.Component {
 		this.__ctx = null;
 	}
 
-	render() {
+	render () {
 
 		const setVal = [0, 1, 5, 10].map((v) => <button key={v} onClick={this.setCount.bind(this, v)}>{v}</button>);
 		const addVal = [2, 1, -1, -2].map((v) => <button key={v}
 		                                                 onClick={this.addCircle.bind(this, v)}>{v > 0 ? '+' : ''}{v}</button>);
 		return (
-			<div style={{userSelect: 'none', width: '600px'}}>
+			<div style={{ userSelect: 'none', width: '600px' }}>
 				{this.state.count}
-				<div style={{position: 'relative', width: '600px', height: '600px'}}>
+				<div style={{ position: 'relative', width: '600px', height: '600px' }}>
 					<canvas ref={this.refCanvasBG} className="canvas-draw"/>
 					<canvas ref={this.refCanvasCircles} className="canvas-draw"/>
 				</div>
@@ -38,12 +40,12 @@ export default class RunningCircle extends React.Component {
 					delay</label>
 				<br/>
 				<input type="range" min={0} max={1000} value={this.state.delay} disabled={this.state.autoDelay}
-				       onInput={this.__handlerDelay} style={{width: '600px'}}/>{this.state.delay}
+				       onInput={this.__handlerDelay} style={{ width: '600px' }}/>{this.state.delay}
 			</div>
 		);
 	}
 
-	componentDidMount() {
+	componentDidMount () {
 		[
 			this.refCanvasBG.current,
 			this.refCanvasCircles.current,
@@ -54,31 +56,33 @@ export default class RunningCircle extends React.Component {
 		this.__ctx.translate(300, 300);
 		this.__pool = new Pool(Ball);
 		this.__pool.onCreate = (ball) => {
-			ball.x = ball.goalX = -R + R2;
-			ball.y = ball.goalY = -R + R2;
+			ball.pos = ball.goal = vec2.fromValues(-R + R2, -R + R2);
 		};
 		this.__pool.load(300);
 		this.__time = Date.now();
 		this.__draw();
 	}
 
-	componentDidUpdate(prevProps, prevState, snapshot) {
+	componentDidUpdate (prevProps, prevState, snapshot) {
 		let setAppear = false;
 		let time = Date.now();
 		let count = this.state.count;
 		ballsCount = count;
-		let prevCount  = prevState.count;
+		let prevCount = prevState.count;
 		let deltaCount = count - prevCount;
 		if (deltaCount) {
 			if (deltaCount > 0) {
+				let i;
+				for (i = 0; i < deltaCount && prevCount + i < balls.length; i++) {
+					balls[prevCount + i].remove = false;
+				}
+				deltaCount -= i;
 				while (deltaCount--) {
 					addBall(this.__pool, time);
 				}
 			} else {
-				let s = deltaCount;
 				while (deltaCount++) {
-					removeBall(this.__pool, s - deltaCount);
-					dissapear(balls[prevCount + deltaCount - 1], time, this.__time);
+					disappear(balls[prevCount + deltaCount - 1], time, this.__time);
 				}
 			}
 			setAppear = true;
@@ -97,7 +101,7 @@ export default class RunningCircle extends React.Component {
 		}
 	}
 
-	__draw() {
+	__draw () {
 		let time = Date.now();
 		let dTime = time - this.__time;
 
@@ -120,7 +124,7 @@ export default class RunningCircle extends React.Component {
 		requestAnimationFrame(() => this.__draw());
 	}
 
-	addCircle(delta, ev) {
+	addCircle (delta, ev) {
 		if (ev.shiftKey) {
 			delta *= 5;
 		}
@@ -128,23 +132,23 @@ export default class RunningCircle extends React.Component {
 			delta *= 10;
 		}
 
-		this.setState({count: Math.max(0, this.state.count + delta)});
+		this.setState({ count: Math.max(0, this.state.count + delta) });
 	}
 
-	showLines(ev) {
-		this.setState({showLines: ev.target.checked});
+	showLines (ev) {
+		this.setState({ showLines: ev.target.checked });
 	}
 
-	setDelay(ev) {
-		this.setState({delay: +ev.target.value});
+	setDelay (ev) {
+		this.setState({ delay: +ev.target.value });
 	}
 
-	setAutoDelay(ev) {
-		this.setState({autoDelay: ev.target.checked});
+	setAutoDelay (ev) {
+		this.setState({ autoDelay: ev.target.checked });
 	}
 
-	setCount(count) {
-		this.setState({count: Math.min(Math.max(0, count), MAX_BALLS)});
+	setCount (count) {
+		this.setState({ count: Math.min(Math.max(0, count), MAX_BALLS) });
 	}
 }
 
@@ -154,15 +158,15 @@ const R2 = Ball.R2;
 const DURATION = 4000;
 const MAX_LINES = 1000;
 const MAX_BALLS = Infinity;
-const balls = [];
+let balls = [];
 let ballsCount = 0;
 
-function initCanvases(canvas) {
+function initCanvases (canvas) {
 	canvas.style.width = (canvas.width = SIZE[0]) + 'px';
 	canvas.style.height = (canvas.height = SIZE[1]) + 'px';
 }
 
-function drawBackground(canvas) {
+function drawBackground (canvas) {
 	let ctx = canvas.getContext('2d');
 	ctx.beginPath();
 	ctx.fillStyle = '#CF0002';
@@ -176,7 +180,7 @@ function drawBackground(canvas) {
 	ctx.fill();
 }
 
-function drawLines(ctx, count) {
+function drawLines (ctx, count) {
 	let a = Math.PI / count;
 	let inc = 1;
 	if (count > MAX_LINES) {
@@ -194,7 +198,7 @@ function drawLines(ctx, count) {
 	ctx.stroke();
 }
 
-function drawCircles(ctx, time, delay, fullTime) {
+function drawCircles (ctx, time, delay, fullTime) {
 	let dist = R - R2;
 	let b = balls;
 	ctx.beginPath();
@@ -202,8 +206,7 @@ function drawCircles(ctx, time, delay, fullTime) {
 		let ball = b[i];
 		ball.delay = delay * i;
 		let d = animate(dist, time + ball.delay);
-		ball.goalX = d * ball.cos;
-		ball.goalY = d * ball.sin;
+		ball.goal = vec2.scale(vec2.create(), ball.trigon, d);
 		ball.animate(fullTime);
 
 		ball.draw(ctx);
@@ -211,81 +214,55 @@ function drawCircles(ctx, time, delay, fullTime) {
 	ctx.fill();
 }
 
-function animate(dist, time) {
+function animate (dist, time) {
 	let rest = time % DURATION;
 	let part = rest / DURATION;
 	return dist * Math.cos(2 * Math.PI * part);
 }
 
-function addBall(pool, time, delay) {
+function addBall (pool, time, delay) {
 	const ball = pool.get();
-	if (balls.indexOf(ball) === -1) {
-		// ball.x = ball.goalX = -R + R2;
-		// ball.y = ball.goalY = -R + R2;
-		ball.delay = delay;
-		ball.animate = defaultAnimate;
-		balls.push(ball);
-	}
+	ball.remove = false;
+	ball.delay = delay;
+	ball.animate = defaultAnimate;
+	balls.push(ball);
 }
 
-function appear(ball, time, startTime) {
-	//if (ball.animate === appearAnimate) return;
-
-/*
-	let dx = ball.goalX - ball.x;
-	let dy = ball.goalY - ball.y;
-	let d1 = Math.sqrt(dx * dx + dy * dy);
-	ball.duration = d1 / 300 * 1000;
-*/
-
+function appear (ball, time, startTime) {
 	let dist = R - R2;
 	let t = time - startTime + ball.duration;
 	let d = animate(dist, t + ball.delay);
 
 	ball.t0 = time;
-	ball.x0 = ball.x;
-	ball.y0 = ball.y;
-	ball.targetX = d * ball.cos;
-	ball.targetY = d * ball.sin;
+	ball.pos0 = vec2.clone(ball.pos);
+	ball.posTarget = vec2.scale(vec2.create(), ball.trigon, d)
 	ball.animate = appearAnimate;
-	// ball.animate(time);
 }
 
-function dissapear(ball, time, startTime) {
-
+function disappear (ball, time) {
 	ball.t0 = time;
-	ball.x0 = ball.x;
-	ball.y0 = ball.y;
-	ball.targetX = -R + R2;
-	ball.targetY = -R + R2;
-
+	ball.pos0 = vec2.clone(ball.pos);
+	ball.posTarget = vec2.fromValues(-R + R2, -R + R2);
+	ball.posDelta = vec2.scale(vec2.create(), ball.delta, 50);
 	ball.animate = animateDisappear;
 }
 
-function animateDisappear(time) {
-	// appearAnimate.call(this, time);
-	if (time > this.t0 + this.duration / 2) {
-		// this.animate = defaultAnimate;
-/*
-		let i = balls.indexOf(this);
-		if (i !== -1) {
-			balls.splice(i, 1);
-		}
-*/
+function animateDisappear (time) {
+	if (time > this.t0 + this.duration) {
+		this.remove = true;
+		queueFunction(removeMarkesBalls);
 		return;
 	}
-	console.log(this.deltaX);
+
 	let part = (time - this.t0) / (this.duration / 2);
-	this.x = cosInterplation(this.x0, this.targetX, part);
-	this.y = cosInterplation(this.y0, this.targetY, part);
+	this.pos = quadraticBesierPoint(this.pos0, this.posDelta, this.posTarget, part);
 }
 
-function defaultAnimate() {
-	this.x = this.goalX;
-	this.y = this.goalY;
+function defaultAnimate () {
+	this.pos = this.goal;
 }
 
-function appearAnimate(time) {
+function appearAnimate (time) {
 	if (time > this.t0 + this.duration) {
 		this.animate = defaultAnimate;
 		this.animate(time);
@@ -294,34 +271,44 @@ function appearAnimate(time) {
 
 
 	let part = (time - this.t0) / this.duration;
-	this.x = cosInterplation(this.x0, this.targetX, part);
-	this.y = cosInterplation(this.y0, this.targetY, part);
-}
-
-function linearInterpolation (v0, v1, p) {
-	return v0 + (v1 - v0) * p;
+	this.pos = cosInterplation(this.pos0, this.posTarget, part);
 }
 
 function cosInterplation (v0, v1, p) {
-	return v0 + (v1 - v0) * Math.sin(Math.PI * (p) / 2);
+	let v = vec2.create();
+	return vec2.add(v, v0, vec2.scale(v, vec2.subtract(v, v1, v0), Math.sin(Math.PI * p / 2)));
 }
 
-function removeBall(pool, lastIndex) {
-	if (balls.length) {
-		pool.put(balls[balls.length + lastIndex]);
-	}
-}
-
-function updateBallsTrigonometry(autoDelay, delay) {
+function updateBallsTrigonometry (autoDelay, delay) {
 	let ln = ballsCount;
 	delay = autoDelay ? DURATION / ln / 2 : delay;
 	let a = Math.PI / ln;
 	for (let i = 0; i < ln; i++) {
 		const ball = balls[i];
 		ball.delay = delay * i;
-		ball.sin = Math.sin(a * i);
-		ball.cos = Math.cos(a * i);
+		ball.trigon = vec2.fromValues(Math.cos(a * i), Math.sin(a * i));
 	}
+}
+
+function removeMarkesBalls () {
+	balls = balls.filter(b => !b.remove);
+}
+
+function quadraticBesierPoint (p1, p2, p3, t) {
+	// P = (1−t)^2 * P1 + 2*(1−t)*t*P2 + t^2 * P3
+	let t1 = 1 - t;
+	return v2AddAll(vec2.create(),
+		vec2.scale(vec2.create(), p1, t1 * t1),
+		vec2.scale(vec2.create(), p2, 2 * t1 * t),
+		vec2.scale(vec2.create(), p3, t * t),
+	);
+}
+
+function v2AddAll (out, v, ...vecs) {
+	if (vecs.length === 1) {
+		return vec2.add(out, v, vecs[0]);
+	}
+	return vec2.add(out, v, v2AddAll(out, ...vecs));
 }
 
 

@@ -1,30 +1,21 @@
+import { vec2 } from 'gl-matrix';
+
 export default class Particle {
 	constructor () {
-		this.__x = 0;
-		this.__y = 0;
-		this.deltaX = 0;
-		this.deltaY = 0;
+		this.__pos = vec2.create();
+		this.delta = vec2.create();
 	}
 
 	draw () {
 
 	}
 
-	set x (v) {
-		this.deltaX = v - this.__x;
-		this.__x = v;
+	set pos (v) {
+		this.delta = vec2.subtract(vec2.create(), v, this.__pos);
+		this.__pos = v;
 	}
 
-	set y (v) {
-		this.deltaY = v - this.__y;
-		this.__y = v;
-	}
-
-	get x () {
-		return this.__x;
-	}
-
-	get y () {
-		return this.__y;
+	get pos () {
+		return this.__pos;
 	}
 }
