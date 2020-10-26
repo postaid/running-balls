@@ -243,12 +243,25 @@ function disappear (ball, time) {
 	ball.t0 = time;
 	ball.pos0 = vec2.clone(ball.pos);
 	ball.posTarget = vec2.fromValues(-R + R2, -R + R2);
-	ball.posDelta = vec2.add(vec2.create(), vec2.scale(vec2.create(), ball.delta, 50), ball.pos0);
+	let delta = vec2.clone(ball.delta);
+	if (delta[0] === 0) delta[0] = 1;
+	if (delta[1] === 0) delta[1] = 1;
+	let posDelta = vec2.add(vec2.create(), vec2.scale(vec2.create(), delta, 50), ball.pos0);
+	if (posDelta[0] < ball.posTarget[0]) {
+		posDelta[1] *= (ball.posTarget[0] - ball.pos0[0]) / (posDelta[0] - ball.pos0[0])
+		posDelta[0] = ball.posTarget[0];
+	}
+	if (posDelta[1] < ball.posTarget[1]) {
+		posDelta[0] *= (ball.posTarget[1] - ball.pos0[1]) / (posDelta[1] - ball.pos0[1])
+		posDelta[1] = ball.posTarget[1];
+	}
+	ball.posDelta = posDelta;
 	ball.animate = animateDisappear;
 }
 
 function animateDisappear (time) {
-	if (time > this.t0 + this.duration) {
+	if (time > this.t0 + this.duration / 2) {
+		this.pos = this.posTarget;
 		this.remove = true;
 		queueFunction(removeMarkesBalls);
 		return;
